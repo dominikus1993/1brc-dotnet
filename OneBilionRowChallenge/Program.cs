@@ -8,7 +8,7 @@ Console.WriteLine($"Reading file: {path}");
 
 await using var app = new AppStream(path);
 
-await app.Run();
+app.Run();
 
 app.Print();
 Environment.Exit(0);

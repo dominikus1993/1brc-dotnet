@@ -20,15 +20,22 @@ public sealed class AppStream : IAsyncDisposable
         _sw = Stopwatch.StartNew();
     }
     
-    public Task Run()
+    public void Run()
     {
-        foreach (var measurement in ReadMeasurements())
+        using var reader = new StreamReader(_fileStream, Encoding.UTF8, true, BufferSize, true);
+        while (reader.ReadLine() is {} line)
         {
+            var parts = line.Split(';');
+            var measurement = new Measurement
+            {
+                City = parts[0],
+                Temperature = double.Parse(parts[1], CultureInfo.InvariantCulture)
+            };
             _count++;
             Check(measurement);
         }
 
-        return Task.CompletedTask;
+        return;
     }
 
     private void Check(Measurement measurement)
@@ -46,11 +53,12 @@ public sealed class AppStream : IAsyncDisposable
 
     public void Print()
     {
+        _sw.Stop();
         foreach (var (city, measurementTemperature) in _measurements)
         {
             Console.WriteLine($"{city}={measurementTemperature.Min}/{measurementTemperature.Mean}/{measurementTemperature.Max}");
         }
-        _sw.Stop();
+        
         Console.WriteLine($"Elapsed time: {_sw.Elapsed}");
         var entriesPerSecond = _count / _sw.Elapsed.TotalSeconds;
         Console.WriteLine($"Entries per second: {entriesPerSecond}");
@@ -63,24 +71,5 @@ public sealed class AppStream : IAsyncDisposable
     {
         _measurements.Clear();
        return _fileStream.DisposeAsync();
-    }
-    
-    private IEnumerable<Measurement> ReadMeasurements()
-    {
-        using var reader = new StreamReader(_fileStream, Encoding.UTF8, true, BufferSize, true);
-        while (reader.ReadLine() is {} line)
-        {
-            var parts = line.Split(';');
-            if (parts is null or {Length: < 2})
-            {
-                yield break;
-            }
-            
-            yield return new Measurement
-            {
-                City = parts[0],
-                Temperature = double.Parse(parts[1], CultureInfo.InvariantCulture)
-            };
-        }
     }
 }
