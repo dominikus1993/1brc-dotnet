@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace OneBilionRowChallenge;
@@ -8,9 +9,10 @@ public sealed class AppStream : IAsyncDisposable
 {
     private readonly FileStream _fileStream;
     private readonly Dictionary<string, MeasurementTemperature> _measurements = new();
-    private const int BufferSize = 64 * 1024;
+    private const int BufferSize = 256 * 1024;
+    
     private int _count;
-    private Stopwatch _sw;
+    private readonly Stopwatch _sw;
 
     public AppStream(string path)
     {
@@ -38,6 +40,7 @@ public sealed class AppStream : IAsyncDisposable
         return;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Check(Measurement measurement)
     {
         if (_measurements.TryGetValue(measurement.City, out var measurementTemperature))
