@@ -56,6 +56,11 @@ public sealed class AppStream : IAsyncDisposable
         while (await reader.ReadLineAsync() is {} line)
         {
             var parts = line.Split(';');
+            if (parts is null or {Length: < 2})
+            {
+                yield break;
+            }
+            
             yield return new Measurement
             {
                 City = parts[0],
