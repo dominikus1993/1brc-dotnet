@@ -1,4 +1,6 @@
-﻿namespace OneBilionRowChallenge;
+﻿using System.Runtime.CompilerServices;
+
+namespace OneBilionRowChallenge;
 
 public sealed class Measurement
 {
@@ -23,10 +25,12 @@ public sealed class MeasurementTemperature
     private uint _numberOfMeasurements;
     private double _sumofMeasurements;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Check(Measurement measurement)
     {
         _numberOfMeasurements++;
         _sumofMeasurements += measurement.Temperature;
+        
         if (measurement.Temperature < Min)
         {
             Min = measurement.Temperature;

@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 
 namespace OneBilionRowChallenge;
@@ -7,20 +8,27 @@ public sealed class AppStream : IAsyncDisposable
 {
     private readonly FileStream _fileStream;
     private readonly Dictionary<string, MeasurementTemperature> _measurements = new();
-    
+    private const int BufferSize = 64 * 1024;
+    private int _count;
+    private Stopwatch _sw;
 
     public AppStream(string path)
     {
-        _fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096,
+        _fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize,
             FileOptions.SequentialScan);
+        _count = 0;
+        _sw = Stopwatch.StartNew();
     }
     
-    public async Task Run()
+    public Task Run()
     {
-        await foreach (var measurement in ReadMeasurements())
+        foreach (var measurement in ReadMeasurements())
         {
+            _count++;
             Check(measurement);
         }
+
+        return Task.CompletedTask;
     }
 
     private void Check(Measurement measurement)
@@ -31,7 +39,7 @@ public sealed class AppStream : IAsyncDisposable
         }
         else
         {
-            _measurements.Add(measurement.City, new MeasurementTemperature(measurement.Temperature));
+            _measurements[measurement.City] = new MeasurementTemperature(measurement.Temperature);
         }
     }
     
@@ -42,6 +50,13 @@ public sealed class AppStream : IAsyncDisposable
         {
             Console.WriteLine($"{city}={measurementTemperature.Min}/{measurementTemperature.Mean}/{measurementTemperature.Max}");
         }
+        _sw.Stop();
+        Console.WriteLine($"Elapsed time: {_sw.Elapsed}");
+        var entriesPerSecond = _count / _sw.Elapsed.TotalSeconds;
+        Console.WriteLine($"Entries per second: {entriesPerSecond}");
+        var estimatedTime = TimeSpan.FromSeconds(1_000_000_000 / entriesPerSecond);
+        Console.WriteLine($"Estimated time for 1 billion entries: {estimatedTime}");
+        
     }
     
     public ValueTask DisposeAsync()
@@ -50,10 +65,10 @@ public sealed class AppStream : IAsyncDisposable
        return _fileStream.DisposeAsync();
     }
     
-    private async IAsyncEnumerable<Measurement> ReadMeasurements()
+    private IEnumerable<Measurement> ReadMeasurements()
     {
-        using var reader = new StreamReader(_fileStream, Encoding.UTF8, true, 4096, true);
-        while (await reader.ReadLineAsync() is {} line)
+        using var reader = new StreamReader(_fileStream, Encoding.UTF8, true, BufferSize, true);
+        while (reader.ReadLine() is {} line)
         {
             var parts = line.Split(';');
             if (parts is null or {Length: < 2})
