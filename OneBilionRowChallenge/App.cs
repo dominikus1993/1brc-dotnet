@@ -6,7 +6,8 @@ namespace OneBilionRowChallenge;
 public sealed class AppStream : IAsyncDisposable
 {
     private readonly FileStream _fileStream;
-
+    private readonly Dictionary<string, MeasurementTemperature> _measurements = new();
+    
 
     public AppStream(string path)
     {
@@ -16,14 +17,36 @@ public sealed class AppStream : IAsyncDisposable
     
     public async Task Run()
     {
-        await foreach (var measurement in ReadMeasurements().Take(1))
+        await foreach (var measurement in ReadMeasurements())
         {
-            Console.WriteLine($"{measurement.City} {measurement.Temperature}");
+            Check(measurement);
         }
     }
 
+    private void Check(Measurement measurement)
+    {
+        if (_measurements.TryGetValue(measurement.City, out var measurementTemperature))
+        {
+            measurementTemperature.Check(measurement);
+        }
+        else
+        {
+            _measurements.Add(measurement.City, new MeasurementTemperature(measurement.Temperature));
+        }
+    }
+    
+
+    public void Print()
+    {
+        foreach (var (city, measurementTemperature) in _measurements)
+        {
+            Console.WriteLine($"{city}={measurementTemperature.Min}/{measurementTemperature.Mean}/{measurementTemperature.Max}");
+        }
+    }
+    
     public ValueTask DisposeAsync()
     {
+        _measurements.Clear();
        return _fileStream.DisposeAsync();
     }
     

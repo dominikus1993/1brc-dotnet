@@ -9,6 +9,8 @@ await using var app = new AppStream(path);
 
 await app.Run();
 
+app.Print();
+
 sw.Stop();
 
 Console.WriteLine($"Elapsed time: {sw.Elapsed}");
