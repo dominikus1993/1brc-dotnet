@@ -5,9 +5,9 @@ using OneBilionRowChallenge;
 
 var sw = Stopwatch.StartNew();
 var path = args is { Length: > 1} ? args[0] : "./measurements.txt";
-using var app = new App();
+await using var app = new App(path);
 
-await app.Run(path);
+await app.Run();
 
 sw.Stop();
 
