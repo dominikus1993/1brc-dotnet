@@ -1,16 +1,17 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Text;
+using csFastFloat;
 
 namespace OneBilionRowChallenge;
 
-public sealed class AppStream : IAsyncDisposable
+public sealed class AppStream : IDisposable
 {
     private readonly FileStream _fileStream;
     private readonly Dictionary<string, MeasurementTemperature> _measurements = new();
-    private const int BufferSize = 256 * 1024;
-    
+    private const int BufferSize = 512 * 1024;
     private int _count;
     private readonly Stopwatch _sw;
 
@@ -25,31 +26,42 @@ public sealed class AppStream : IAsyncDisposable
     public void Run()
     {
         using var reader = new StreamReader(_fileStream, Encoding.UTF8, true, BufferSize, true);
-        while (reader.ReadLine() is {} line)
+        var line = reader.ReadLine();
+        while (line is not null)
         {
-            var parts = line.Split(';');
-            var measurement = new Measurement
-            {
-                City = parts[0],
-                Temperature = double.Parse(parts[1], CultureInfo.InvariantCulture)
-            };
             _count++;
-            Check(measurement);
+            var parts = FastSplit(line, ';');
+            Check(parts.city, parts.temp);
+            line = reader.ReadLine();
         }
-
         return;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Check(Measurement measurement)
+    private static (string city, double temp) FastSplit(string txt, char separator)
     {
-        if (_measurements.TryGetValue(measurement.City, out var measurementTemperature))
+        var span = txt.AsSpan();
+        for (int i = 0; i < txt.Length; i++)
         {
-            measurementTemperature.Check(measurement);
+            if (span[i] == separator)
+            {
+                return (new string(span[..i]), FastDoubleParser.ParseDouble(span[(i + 1)..]));
+            }
+        }
+
+        throw new InvalidOperationException("cannot split");
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void Check(string city, double temperature)
+    {
+        if (_measurements.TryGetValue(city, out var measurementTemperature))
+        {
+            measurementTemperature.Check(temperature);
         }
         else
         {
-            _measurements[measurement.City] = new MeasurementTemperature(measurement.Temperature);
+            _measurements[city] = new MeasurementTemperature(temperature);
         }
     }
     
@@ -70,9 +82,10 @@ public sealed class AppStream : IAsyncDisposable
         
     }
     
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
         _measurements.Clear();
-       return _fileStream.DisposeAsync();
+        _fileStream.Flush();
+       _fileStream.Dispose();
     }
 }

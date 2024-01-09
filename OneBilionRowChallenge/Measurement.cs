@@ -26,20 +26,20 @@ public sealed class MeasurementTemperature
     private double _sumofMeasurements;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Check(Measurement measurement)
+    public void Check(double measurement)
     {
         _numberOfMeasurements++;
-        _sumofMeasurements += measurement.Temperature;
+        _sumofMeasurements += measurement;
         
-        if (measurement.Temperature < Min)
+        if (measurement < Min)
         {
-            Min = measurement.Temperature;
+            Min = measurement;
             return;
         }
 
-        if (measurement.Temperature > Max)
+        if (measurement > Max)
         {
-            Max = measurement.Temperature;
+            Max = measurement;
             return;
         }
     }
